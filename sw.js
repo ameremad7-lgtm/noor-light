@@ -1,4 +1,4 @@
-const C = 'noor-v2';
+const C = 'noor-v3';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './masajid.json'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(C).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -13,6 +13,19 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // official iERA logo: cache-first so it shows offline too
+  if (url.hostname === 'assets.cdn.filesafe.space') {
+    e.respondWith(
+      caches.match(req).then((hit) =>
+        hit || fetch(req).then((res) => {
+          const cp = res.clone();
+          caches.open(C).then((c) => c.put(req, cp));
+          return res;
+        })
+      )
+    );
+    return;
+  }
   if (url.origin !== location.origin) return;
   const freshFirst = req.mode === 'navigate' || url.pathname.endsWith('masajid.json');
   if (freshFirst) {
